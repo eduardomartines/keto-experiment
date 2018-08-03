@@ -1,0 +1,8 @@
+FROM ruby:alpine
+
+WORKDIR /usr/local/src
+
+ADD Gemfile* /usr/local/src/
+RUN bundle install
+
+ADD . .
