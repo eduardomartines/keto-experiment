@@ -2,34 +2,43 @@ require 'net/http'
 require 'json'
 
 describe 'Policies' do
+  let(:uri) { URI('http://keto:4466/policies') }
+  let(:http) { Net::HTTP.new(uri.host, uri.port) }
+
+  it 'returns 0 in the policy list' do
+    request = Net::HTTP::Get.new(uri.path, 'Content-Type' => 'application/json')
+    expect(http.request(request).body).to eq('[]')
+  end
+
   describe 'creation' do
-    before do
-      uri = URI('http://keto:4466/policies')
-      http = Net::HTTP.new(uri.host, uri.port)
-      req = Net::HTTP::Post.new(uri.path, 'Content-Type' => 'application/json')
-
-      req.body = '{
-          "id": "id-foo",
-          "actions": ["action-foo", "action-bar"],
-          "conditions": {
-            "conditionKeyFoo": {
-              "options": {
-                "equals": "conditionValueFoo"
-              },
-              "type": "StringEqualCondition"
-            }
-          },
-          "description": "description-foo",
-          "effect": "allow",
-          "resources": ["resource-foo:bar"],
-          "subjects": ["subject-foo"]
+    let(:id) { 'id-foo' }
+    let(:body) do
+      '{
+        "id": "' + id + '",
+        "actions": ["action-foo", "action-bar"],
+        "conditions": {
+          "conditionKeyFoo": {
+            "options": {
+              "equals": "conditionValueFoo"
+            },
+            "type": "StringEqualCondition"
+          }
+        },
+        "description": "description-foo",
+        "effect": "allow",
+        "resources": ["resource-foo:bar"],
+        "subjects": ["subject-foo"]
       }'
-
-      @response = http.request(req)
     end
 
-    context 'when correct params is passed' do
-      it 'returns true' do
+    before do
+      request = Net::HTTP::Post.new(uri.path, 'Content-Type' => 'application/json')
+      request.body = body
+      @response = http.request(request)
+    end
+
+    context 'when correct params is passed in the first time' do
+      it 'returns a policy' do
         result = "{
           \"id\": \"id-foo\",
           \"description\": \"description-foo\",
@@ -56,8 +65,95 @@ describe 'Policies' do
       end
     end
 
+    context 'when correct params with same ID is passed in the second time' do
+      it 'returns the same policy' do
+        result = "{
+          \"id\": \"id-foo\",
+          \"description\": \"description-foo\",
+          \"subjects\": [\"subject-foo\"],
+          \"effect\": \"allow\",
+          \"resources\": [\"resource-foo:bar\"],
+          \"actions\": [\"action-foo\", \"action-bar\"],
+          \"conditions\": {
+            \"conditionKeyFoo\": {
+              \"type\": \"StringEqualCondition\",
+              \"options\": {
+                \"equals\": \"conditionValueFoo\"
+              }
+            }
+          },
+          \"meta\": null
+        }"
+
+        result.delete!("\t")
+        result.delete!("\n")
+        result.delete!(' ')
+
+        expect(@response.body).to eq(result)
+      end
+
+      it 'returns 1 in the policy list' do
+        request = Net::HTTP::Get.new(uri.path, 'Content-Type' => 'application/json')
+        expect(JSON.parse(http.request(request).body).count).to eq(1)
+      end
+    end
+
+    context 'when correct params is passed in the third time' do
+      let(:id) { 'id-foo2' }
+
+      it 'returns a policy' do
+        result = "{
+          \"id\": \"id-foo2\",
+          \"description\": \"description-foo\",
+          \"subjects\": [\"subject-foo\"],
+          \"effect\": \"allow\",
+          \"resources\": [\"resource-foo:bar\"],
+          \"actions\": [\"action-foo\", \"action-bar\"],
+          \"conditions\": {
+            \"conditionKeyFoo\": {
+              \"type\": \"StringEqualCondition\",
+              \"options\": {
+                \"equals\": \"conditionValueFoo\"
+              }
+            }
+          },
+          \"meta\": null
+        }"
+
+        result.delete!("\t")
+        result.delete!("\n")
+        result.delete!(' ')
+
+        expect(@response.body).to eq(result)
+      end
+
+      it 'returns 2 in the policy list' do
+        request = Net::HTTP::Get.new(uri.path, 'Content-Type' => 'application/json')
+        expect(JSON.parse(http.request(request).body).count).to eq(2)
+      end
+    end
+
+    context 'when correct params without an ID is passed' do
+      let(:id) { '' }
+
+      it 'returns a policy with an auto generated UID' do
+        expect(@response.body).to match(/\"id\":\"([a-z0-9]+\-){4}[a-z0-9]+\"/)
+      end
+
+      it 'returns 3 in the policy list' do
+        request = Net::HTTP::Get.new(uri.path, 'Content-Type' => 'application/json')
+        expect(JSON.parse(http.request(request).body).count).to eq(4)
+      end
+    end
+
     context 'when wrong params is passed' do
-      it 'returns false'
+      let(:body) { '{ "foo": ["bar"] }' }
+
+      it 'returns an error' do
+        expect(@response.body).to eq(
+          "{\"error\":{\"code\":500,\"message\":\"pq: new row for relation \\\"ladon_policy\\\" violates check constraint \\\"ladon_policy_effect_check\\\"\"}}\n"
+        )
+      end
     end
   end
 end

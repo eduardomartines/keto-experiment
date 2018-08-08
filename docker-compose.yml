@@ -17,8 +17,6 @@ services:
       - postgresd:postgresd
     ports:
       - "4466:4466"
-    depends_on:
-      - keto-migrate
     command:
       serve
     environment:
@@ -33,8 +31,6 @@ services:
       - POSTGRES_USER=dbuser
       - POSTGRES_PASSWORD=secret
       - POSTGRES_DB=accesscontroldb
-    volumes:
-      - database:/var/lib/postgresql/data
 
   test:
     build:
@@ -47,6 +43,3 @@ services:
       - ./:/usr/local/src
     environment:
       - KETO_ENDPOINT=http://keto:4466
-
-volumes:
-  database:
