@@ -1,7 +1,7 @@
 require 'net/http'
 require 'json'
 
-describe 'Policies' do
+describe 'Policy' do
   let(:uri) { URI('http://keto:4466/policies') }
   let(:http) { Net::HTTP.new(uri.host, uri.port) }
 
@@ -12,6 +12,7 @@ describe 'Policies' do
 
   describe 'creation' do
     let(:id) { 'id-foo' }
+    let(:subjects) { '"subject-foo"' }
     let(:body) do
       '{
         "id": "' + id + '",
@@ -27,7 +28,7 @@ describe 'Policies' do
         "description": "description-foo",
         "effect": "allow",
         "resources": ["resource-foo:bar"],
-        "subjects": ["subject-foo"]
+        "subjects": [' + subjects + ']
       }'
     end
 
@@ -99,8 +100,9 @@ describe 'Policies' do
       end
     end
 
-    context 'when correct params with other ID is passed in the third time' do
+    context 'when correct params with other ID and role in subject is passed in the third time' do
       let(:id) { 'id-foo2' }
+      let(:subjects) { '"subject-foo", "id-role-foo"' }
 
       it 'returns a policy' do
         expect(@response.body).to match(/\"id\":\"id-foo2\"/)

@@ -1,7 +1,7 @@
 require 'net/http'
 require 'json'
 
-describe 'Policies' do
+describe 'Policy' do
   describe 'exhibition' do
     context 'when correct params is passed' do
       it 'returns the policy'
